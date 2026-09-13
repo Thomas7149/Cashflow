@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isMember(centreId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/centres/$(centreId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/centres/$(centreId)/members/$(request.auth.uid)).data.active == true;
+    }
+    function ownsCentre(centreId) {
+      return isMember(centreId)
+        && get(/databases/$(database)/documents/centres/$(centreId)/members/$(request.auth.uid)).data.role == 'owner';
+    }
+    function invite(centreId, inviteId) {
+      return get(/databases/$(database)/documents/centres/$(centreId)/invites/$(inviteId)).data;
+    }
+
+    // A student self-registering through a public QR link is never authenticated,
+    // so this is the only gate against spam/tampering: the record can only
+    // reference a course that already exists in this centre's own catalogue, the
+    // amount owed must exactly match that course's fee (a visitor cannot set
+    // their own price), the balance must start at zero, and no extra fields can
+    // be smuggled in.
+    function isValidPublicRegistration(centreId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['id', 'name', 'course', 'total', 'paid', 'color', 'initials', 'createdAt'])
+        && data.id is string && data.id == studentId
+        && data.name is string && data.name.size() > 0 && data.name.size() < 120
+        && data.paid == 0
+        && data.course is string
+        && exists(/databases/$(database)/documents/centres/$(centreId)/courses/$(data.course))
+        && data.total == get(/databases/$(database)/documents/centres/$(centreId)/courses/$(data.course)).data.fee;
+    }
+
+    // A user only ever belongs to one centre. This top-level pointer is how an
+    // invited member (whose own uid is not the centre's ID) finds their way
+    // back to the right centre after signing in -- there is no safe way to
+    // search across every centre's members subcollection for a match.
+    match /memberships/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /centres/{centreId} {
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && centreId == request.auth.uid;
+      allow read: if isMember(centreId);
+      allow update: if ownsCentre(centreId);
+      allow delete: if false;
+
+      match /members/{memberId} {
+        // Bootstrap: the very first member of a centre is always its owner,
+        // created once at first setup, and only ever for their own uid.
+        allow create: if signedIn() && centreId == request.auth.uid && memberId == request.auth.uid
+          && request.resource.data.role == 'owner';
+        // Joining via invite: the invite must exist, already be marked used by
+        // this exact user (the client claims the invite first, then creates
+        // this membership document), and the role/email must match it exactly
+        // -- nobody can hand themselves the "owner" role this way.
+        allow create: if signedIn() && memberId == request.auth.uid && centreId != request.auth.uid
+          && request.resource.data.role == invite(centreId, request.resource.data.inviteId).role
+          && request.resource.data.role != 'owner'
+          && request.resource.data.active == true
+          && invite(centreId, request.resource.data.inviteId).used == true
+          && invite(centreId, request.resource.data.inviteId).claimedBy == request.auth.uid;
+        allow read: if isMember(centreId);
+        allow update, delete: if ownsCentre(centreId);
+      }
+
+      // Invitations let the owner add a cashier without needing to know their
+      // uid up front: the owner creates an invite, shares the link, and the
+      // invited person's own sign-in claims it (see the members rule above).
+      match /invites/{inviteId} {
+        allow create: if ownsCentre(centreId)
+          && request.resource.data.keys().hasOnly(['email', 'role', 'used', 'createdAt'])
+          && request.resource.data.role == 'cashier'
+          && request.resource.data.used == false;
+        allow get: if signedIn();
+        allow list: if ownsCentre(centreId);
+        allow update: if signedIn()
+          && resource.data.used == false
+          && request.resource.data.used == true
+          && request.resource.data.claimedBy == request.auth.uid
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.keys().hasOnly(['email', 'role', 'used', 'createdAt', 'claimedBy']);
+        allow delete: if ownsCentre(centreId);
+      }
+
+      // The course catalogue is meant to be public: it's exactly what a visitor
+      // needs to see before self-registering from a shared QR code. Only the
+      // owner curates it -- a cashier can register students but not add
+      // formations or change their price.
+      match /courses/{courseId} {
+        allow get, list: if true;
+        allow write: if ownsCentre(centreId);
+      }
+
+      match /students/{studentId} {
+        // A student (or their parent) checking their own card's status has no
+        // account -- `get` (fetch by the exact known ID) stays public, but `list`
+        // (browsing/querying the whole roster) is restricted to the centre's
+        // own members, so a visitor can never enumerate other students.
+        allow get: if true;
+        allow list: if isMember(centreId);
+        allow create: if isMember(centreId) || isValidPublicRegistration(centreId);
+        allow update, delete: if isMember(centreId);
+      }
+
+      // Internal sequence counter used to generate human-readable receipt
+      // numbers (REC-2026-0001...) inside the payment transaction.
+      match /meta/{docId} {
+        allow read, write: if isMember(centreId);
+      }
+
+      match /payments/{paymentId} {
+        allow read: if isMember(centreId);
+        allow create: if isMember(centreId)
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0;
+        // Payments are an audit trail: once recorded, they are never edited or removed.
+        allow update, delete: if false;
+      }
+    }
+  }
+}
