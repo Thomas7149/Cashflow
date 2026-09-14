@@ -8,8 +8,8 @@ export default function QrExportBank({ centreId, students, courses }) {
   return (
     <div className="qr-export-bank" aria-hidden="true">
       {students.map((s) => <QRCodeCanvas key={s.id} data-qr={s.id} value={studentUrl(centreId, s.id)} size={180} />)}
-      {Object.keys(courses).map((course, index) => (
-        <QRCodeCanvas key={course} data-course-qr={index} value={courseUrl(centreId, course)} size={240} />
+      {Object.keys(courses).map((course) => (
+        <QRCodeCanvas key={course} data-course-qr={course} value={courseUrl(centreId, course)} size={240} />
       ))}
     </div>
   )

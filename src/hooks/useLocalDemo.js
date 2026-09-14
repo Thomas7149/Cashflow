@@ -16,6 +16,7 @@ const KEYS = {
   descriptions: 'cashflow-course-descriptions',
   logo: 'cashflow-logo',
   brandColor: 'cashflow-brand-color',
+  customFields: 'cashflow-custom-fields',
   receiptSeq: 'cashflow-receipt-seq',
 }
 
@@ -37,6 +38,7 @@ export function useLocalDemo() {
   const [courseDescriptions, setCourseDescriptions] = useState(() => readJSON(KEYS.descriptions, {}))
   const [logoUrl, setLogoUrl] = useState(() => localStorage.getItem(KEYS.logo) || '')
   const [brandColor, setBrandColor] = useState(() => localStorage.getItem(KEYS.brandColor) || '#315c48')
+  const [customFields, setCustomFields] = useState(() => readJSON(KEYS.customFields, []))
 
   useEffect(() => { localStorage.setItem(KEYS.students, JSON.stringify(students)) }, [students])
   useEffect(() => { localStorage.setItem(KEYS.payments, JSON.stringify(payments)) }, [payments])
@@ -51,7 +53,7 @@ export function useLocalDemo() {
     localStorage.setItem(KEYS.setup, 'true')
   }, [])
 
-  const addStudent = useCallback(({ name, course, total }) => {
+  const addStudent = useCallback(({ name, course, total, customAnswers }) => {
     const student = {
       id: generateStudentId(),
       name,
@@ -62,8 +64,18 @@ export function useLocalDemo() {
       initials: name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
       createdAt: new Date().toISOString(),
     }
+    if (customAnswers && Object.keys(customAnswers).length) student.customAnswers = customAnswers
     setStudents((current) => [student, ...current])
     return student
+  }, [])
+
+  const renameStudent = useCallback((student, name) => {
+    const initials = name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+    setStudents((current) => current.map((s) => (s.id === student.id ? { ...s, name, initials } : s)))
+  }, [])
+
+  const deleteStudent = useCallback((student) => {
+    setStudents((current) => current.filter((s) => s.id !== student.id))
   }, [])
 
   const addPayment = useCallback((student, amount) => {
@@ -93,6 +105,11 @@ export function useLocalDemo() {
     localStorage.setItem(KEYS.brandColor, color)
   }, [])
 
+  const saveCustomFields = useCallback((fields) => {
+    setCustomFields(fields)
+    localStorage.setItem(KEYS.customFields, JSON.stringify(fields))
+  }, [])
+
   const updateLogo = useCallback(async (file) => {
     const dataUrl = await compressLogoToDataUrl(file)
     localStorage.setItem(KEYS.logo, dataUrl)
@@ -109,6 +126,7 @@ export function useLocalDemo() {
     centreName,
     logoUrl,
     brandColor,
+    customFields,
     students,
     payments,
     courses,
@@ -117,9 +135,12 @@ export function useLocalDemo() {
     dataError: '',
     completeSetup,
     addStudent,
+    renameStudent,
+    deleteStudent,
     addPayment,
     createCourse,
     saveBranding,
+    saveCustomFields,
     updateLogo,
     removeLogo,
   }

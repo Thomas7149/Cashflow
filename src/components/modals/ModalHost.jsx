@@ -12,15 +12,18 @@ import PortalModal from './PortalModal'
 import HelpModal from './HelpModal'
 import TroubleshootingModal from './TroubleshootingModal'
 import NotificationsModal from './NotificationsModal'
-import { downloadCourseQrPdf, downloadPaymentsReportCsv, downloadStudentCard } from '../../services/pdf'
+import CustomFieldsModal from './CustomFieldsModal'
+import EditProfileModal from './EditProfileModal'
+import ConfirmModal from './ConfirmModal'
+import { downloadCourseQrPdf, downloadPaymentsReportCsv, downloadSingleCourseQr, downloadStudentCard } from '../../services/pdf'
 import { courseUrl, inviteUrl } from '../../lib/urls'
 import { createInvite } from '../../services/invites'
 
 export default function ModalHost({
   modal, setModal, closeModal, selected, setSelected, formError, setFormError,
-  centreId, centreName, branding, theme, role, students, payments, courses, syncState, userLabel,
+  centreId, centreName, branding, theme, role, students, payments, courses, customFields, syncState, userLabel, profileName,
   collected, expected,
-  onAddStudent, onAddPayment, onCreateCourse, onSaveBranding, onUpdateLogo, onRemoveLogo, onLogout, notify,
+  onAddStudent, onRenameStudent, onDeleteStudent, onAddPayment, onCreateCourse, onSaveBranding, onSaveCustomFields, onUpdateLogo, onRemoveLogo, onLogout, onUpdateProfileName, notify,
 }) {
   if (!modal) return null
 
@@ -32,6 +35,7 @@ export default function ModalHost({
       return (
         <StudentModal
           courses={courses}
+          customFields={customFields}
           close={closeModal}
           onCreateCourse={isOwner ? () => setModal('course-create') : undefined}
           onSubmit={async (data) => { await onAddStudent(data); closeModal() }}
@@ -74,12 +78,45 @@ export default function ModalHost({
         <ActionsModal
           student={selected}
           centreId={centreId}
+          customFields={customFields}
           close={closeModal}
           onRecordPayment={() => setModal('payment')}
+          onRename={async (name) => {
+            await onRenameStudent(selected, name)
+            setSelected({ ...selected, name })
+            notify('Nom mis à jour')
+          }}
+          onDelete={() => setModal('confirm-delete-student')}
           onDownloadCard={async () => {
             if (!(await downloadStudentCard(selected, branding))) notify('QR introuvable, réessayez.')
             else notify('PDF téléchargé')
           }}
+        />
+      )
+
+    case 'confirm-delete-student':
+      return (
+        <ConfirmModal
+          title="Supprimer cet étudiant ?"
+          message={`${selected.name} et son historique de paiement lié seront définitivement retirés de la liste. Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          danger
+          close={() => setModal('actions')}
+          onConfirm={async () => {
+            await onDeleteStudent(selected)
+            notify('Étudiant supprimé')
+            closeModal()
+          }}
+        />
+      )
+
+    case 'edit-profile':
+      return (
+        <EditProfileModal
+          currentName={profileName}
+          email={userLabel}
+          close={closeModal}
+          onSave={async (name) => { await onUpdateProfileName(name); notify('Profil mis à jour') }}
         />
       )
 
@@ -95,11 +132,22 @@ export default function ModalHost({
           isOwner={isOwner}
           close={closeModal}
           onCreateCourse={() => setModal('course-create')}
-          onLogout={onLogout}
+          onOpenCustomFields={() => setModal('custom-fields')}
+          onLogout={() => setModal('confirm-logout')}
           onUpdateLogo={onUpdateLogo}
           onRemoveLogo={onRemoveLogo}
           notify={notify}
           onSave={async (data) => { await onSaveBranding(data); closeModal(); notify('Paramètres enregistrés') }}
+        />
+      )
+
+    case 'custom-fields':
+      return (
+        <CustomFieldsModal
+          fields={customFields}
+          close={() => setModal('settings')}
+          notify={notify}
+          onSave={onSaveCustomFields}
         />
       )
 
@@ -113,7 +161,7 @@ export default function ModalHost({
           onCreateCentre={() => setModal('create-centre')}
           onMembers={() => setModal('members')}
           onSettings={() => setModal('settings')}
-          onLogout={onLogout}
+          onLogout={() => setModal('confirm-logout')}
         />
       )
 
@@ -148,7 +196,7 @@ export default function ModalHost({
           collected={collected}
           remaining={expected - collected}
           close={closeModal}
-          onDownload={() => { downloadPaymentsReportCsv(payments, students); notify('Rapport des paiements téléchargé') }}
+          onDownload={() => { downloadPaymentsReportCsv(payments, students, customFields); notify('Rapport des paiements téléchargé') }}
         />
       )
 
@@ -159,6 +207,7 @@ export default function ModalHost({
           courses={courses}
           close={closeModal}
           onCopyLink={(course) => { navigator.clipboard?.writeText(courseUrl(centreId, course)); notify('Lien de formation copié') }}
+          onDownloadOne={async (course) => { await downloadSingleCourseQr(course, branding); notify('PDF téléchargé') }}
           onDownload={async () => { if (!(await downloadCourseQrPdf(courses, branding))) notify('Créez une formation avant d’exporter ses QR') }}
         />
       )
@@ -180,6 +229,18 @@ export default function ModalHost({
 
     case 'notifications':
       return <NotificationsModal close={closeModal} syncState={syncState} openBalancesCount={openBalances} studentsCount={students.length} />
+
+    case 'confirm-logout':
+      return (
+        <ConfirmModal
+          title="Se déconnecter ?"
+          message="Vous devrez vous reconnecter pour accéder à votre tableau de bord."
+          confirmLabel="Se déconnecter"
+          danger
+          close={closeModal}
+          onConfirm={onLogout}
+        />
+      )
 
     default:
       return null

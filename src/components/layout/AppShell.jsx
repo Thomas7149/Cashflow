@@ -9,9 +9,9 @@ import { hexToRgba } from '../../lib/color'
 import { downloadAllStudentCards } from '../../services/pdf'
 
 export default function AppShell({
-  centreId, centreName, logoUrl, brandColor, students, payments, courses, syncState,
+  centreId, centreName, logoUrl, brandColor, customFields, students, payments, courses, syncState,
   userLabel, userRole, role, accountLabel, ui, toast, notify, theme,
-  onAddStudent, onAddPayment, onCreateCourse, onSaveBranding, onUpdateLogo, onRemoveLogo, onLogout,
+  onAddStudent, onRenameStudent, onDeleteStudent, onAddPayment, onCreateCourse, onSaveBranding, onSaveCustomFields, onUpdateLogo, onRemoveLogo, onLogout, onUpdateProfileName,
 }) {
   const isOwner = role !== 'cashier'
   const collected = students.reduce((sum, s) => sum + s.paid, 0)
@@ -35,7 +35,7 @@ export default function AppShell({
         onNavigate={ui.openNav}
         onOpenWorkspace={() => ui.setModal('workspace')}
         onOpenHelp={() => ui.setModal('help')}
-        onOpenProfile={() => ui.setModal('settings')}
+        onOpenProfile={() => ui.setModal('edit-profile')}
         userLabel={userLabel}
         userRole={userRole}
         isOwner={isOwner}
@@ -99,17 +99,23 @@ export default function AppShell({
         students={students}
         payments={payments}
         courses={courses}
+        customFields={customFields}
         syncState={syncState}
         userLabel={accountLabel}
+        profileName={userLabel}
         collected={collected}
         expected={expected}
         onAddStudent={onAddStudent}
+        onRenameStudent={onRenameStudent}
+        onDeleteStudent={onDeleteStudent}
         onAddPayment={onAddPayment}
         onCreateCourse={onCreateCourse}
         onSaveBranding={onSaveBranding}
+        onSaveCustomFields={onSaveCustomFields}
         onUpdateLogo={onUpdateLogo}
         onRemoveLogo={onRemoveLogo}
         onLogout={onLogout}
+        onUpdateProfileName={onUpdateProfileName}
         notify={notify}
       />
 

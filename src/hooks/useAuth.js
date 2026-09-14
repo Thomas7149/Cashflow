@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  updateProfile,
 } from 'firebase/auth'
 import { auth, firebaseErrorMessage, firebaseReady, googleProvider } from '../firebase'
 
@@ -35,5 +36,12 @@ export function useAuth() {
   const loginWithGoogle = () => runAuthAction(() => signInWithPopup(auth, googleProvider))
   const logout = () => auth && signOut(auth)
 
-  return { user, authLoading, authError, login, signup, loginWithGoogle, logout }
+  const updateDisplayName = async (name) => {
+    await updateProfile(auth.currentUser, { displayName: name })
+    // auth.currentUser mutates in place, so re-set state with a fresh object
+    // reference to trigger a re-render of anything reading user.displayName.
+    setUser((current) => (current ? { ...current, displayName: name } : current))
+  }
+
+  return { user, authLoading, authError, login, signup, loginWithGoogle, logout, updateDisplayName }
 }

@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Check, QrCode } from 'lucide-react'
 
-export default function PublicRegistration({ courses, initialCourse, loading, onSubmit, error }) {
+export default function PublicRegistration({ courses, customFields = [], initialCourse, loading, onSubmit, error }) {
   const [submitting, setSubmitting] = useState(false)
   const courseNames = Object.keys(courses)
-  const decodedInitial = initialCourse ? decodeURIComponent(initialCourse) : ''
-  const selectedCourse = courseNames.includes(decodedInitial) ? decodedInitial : courseNames[0] || ''
+  // parseHash already URL-decodes this value; decoding it again here would
+  // corrupt a course name containing accented characters or a literal "%".
+  const selectedCourse = courseNames.includes(initialCourse) ? initialCourse : courseNames[0] || ''
 
   const submit = async (event) => {
     event.preventDefault()
@@ -14,9 +15,16 @@ export default function PublicRegistration({ courses, initialCourse, loading, on
     const course = data.get('course')
     const total = Number(courses[course])
     if (!name || !course || !total) return
+
+    const customAnswers = {}
+    customFields.forEach((field) => {
+      const value = data.get(`custom-${field.id}`)?.toString().trim()
+      if (value) customAnswers[field.id] = value
+    })
+
     setSubmitting(true)
     try {
-      await onSubmit({ name, course, total })
+      await onSubmit({ name, course, total, customAnswers })
     } finally {
       setSubmitting(false)
     }
@@ -60,6 +68,11 @@ export default function PublicRegistration({ courses, initialCourse, loading, on
               {courseNames.map((course) => <option key={course}>{course}</option>)}
             </select>
           </label>
+          {customFields.map((field) => (
+            <label key={field.id}>{field.label}
+              <input name={`custom-${field.id}`} required={field.required} />
+            </label>
+          ))}
           <button className="button-primary full" disabled={submitting}><Check size={17} /> {submitting ? 'Inscription...' : 'Valider mon inscription'}</button>
         </form>
       </div>

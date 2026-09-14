@@ -110,3 +110,11 @@
 .theme-option{flex:1;border:1px solid var(--line);border-radius:8px;padding:9px;font-size:11px;text-align:center;color:#68746b}
 .theme-option.selected{border-color:var(--accent,#315c48);color:var(--accent,#315c48);font-weight:700;background:var(--accent-soft,#eef1eb)}
 [data-theme="dark"] .theme-option{border-color:#2a3022;color:#a7ae9c}
+.password-field{position:relative;display:flex}
+.password-field input{flex:1;padding-right:34px}
+.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#8b9482;padding:4px}
+[data-theme="dark"] .password-toggle{color:#8b9482}
+.confirm-actions{display:flex;gap:10px;margin-top:4px}
+.confirm-actions .button-secondary,.confirm-actions .button-primary{flex:1}
+.button-primary.danger{background:#a53b3b}
+[data-theme="dark"] .confirm-modal{background:#1b1f16}

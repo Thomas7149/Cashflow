@@ -10,7 +10,7 @@ const THEME_OPTIONS = [
   { value: 'auto', label: 'Auto', Icon: Monitor },
 ]
 
-export default function SettingsModal({ centreName, brandColor, logoUrl, courses, close, onCreateCourse, onLogout, userLabel, theme, isOwner = true, onSave, onUpdateLogo, onRemoveLogo, notify }) {
+export default function SettingsModal({ centreName, brandColor, logoUrl, courses, close, onCreateCourse, onOpenCustomFields, onLogout, userLabel, theme, isOwner = true, onSave, onUpdateLogo, onRemoveLogo, notify }) {
   const [color, setColor] = useState(brandColor || '#315c48')
   const [logoBusy, setLogoBusy] = useState(false)
   const [logoError, setLogoError] = useState('')
@@ -112,6 +112,7 @@ export default function SettingsModal({ centreName, brandColor, logoUrl, courses
             <button className="button-primary full"><Check size={17} /> Enregistrer les paramètres</button>
           </form>
           <button className="button-secondary full" onClick={onCreateCourse}><Plus size={16} /> Créer une formation</button>
+          <button className="button-secondary full" onClick={onOpenCustomFields}><Plus size={16} /> Personnaliser la fiche d’inscription</button>
         </>
       ) : (
         <div className="course-catalog" style={{ marginBottom: 4 }}>

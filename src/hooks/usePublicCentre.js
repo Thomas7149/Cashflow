@@ -10,10 +10,14 @@ import { generateStudentId } from '../lib/ids'
 // can never browse a centre's full roster.
 export function usePublicCourses(centreId) {
   const [courses, setCourses] = useState({})
+  const [customFields, setCustomFields] = useState([])
   const [loading, setLoading] = useState(Boolean(centreId))
 
   useEffect(() => {
     if (!centreId || !db) { setLoading(false); return undefined }
+    getDoc(doc(db, 'centres', centreId))
+      .then((snapshot) => { if (snapshot.exists()) setCustomFields(snapshot.data().customFields || []) })
+      .catch(() => {})
     return onSnapshot(
       collection(db, 'centres', centreId, 'courses'),
       (snapshot) => {
@@ -26,7 +30,7 @@ export function usePublicCourses(centreId) {
     )
   }, [centreId])
 
-  return { courses, loading }
+  return { courses, customFields, loading }
 }
 
 export function usePublicStudent(centreId, studentId) {
@@ -46,7 +50,7 @@ export function usePublicStudent(centreId, studentId) {
   return { student, loading }
 }
 
-export async function registerPublicStudent(centreId, { name, course, total }) {
+export async function registerPublicStudent(centreId, { name, course, total, customAnswers }) {
   const student = {
     id: generateStudentId(),
     name,
@@ -57,6 +61,7 @@ export async function registerPublicStudent(centreId, { name, course, total }) {
     initials: name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
     createdAt: new Date().toISOString(),
   }
+  if (customAnswers && Object.keys(customAnswers).length) student.customAnswers = customAnswers
   await setDoc(doc(db, 'centres', centreId, 'students', student.id), student)
   return student
 }

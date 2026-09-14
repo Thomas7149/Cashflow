@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -26,6 +27,7 @@ export function useCentreData(centreId, user) {
   const [centreName, setCentreName] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
   const [brandColor, setBrandColor] = useState('#315c48')
+  const [customFields, setCustomFields] = useState([])
   const [students, setStudents] = useState([])
   const [payments, setPayments] = useState([])
   const [courses, setCourses] = useState({})
@@ -38,6 +40,7 @@ export function useCentreData(centreId, user) {
     setCentreName('')
     setLogoUrl('')
     setBrandColor('#315c48')
+    setCustomFields([])
     setStudents([])
     setPayments([])
     setCourses({})
@@ -55,6 +58,7 @@ export function useCentreData(centreId, user) {
           setCentreName(snapshot.data().name || '')
           setLogoUrl(snapshot.data().logoUrl || '')
           setBrandColor(snapshot.data().brandColor || '#315c48')
+          setCustomFields(snapshot.data().customFields || [])
         }
       })
       .catch(() => setDataError('Impossible de charger le centre.'))
@@ -67,7 +71,7 @@ export function useCentreData(centreId, user) {
       collection(db, 'centres', centreId, 'students'),
       (snapshot) => {
         setStudents(snapshot.docs.map((item) => item.data()))
-        setSyncState('Synchronisé avec Firebase')
+        setSyncState('Connecté')
       },
       () => { setDataError('Impossible de synchroniser les étudiants.'); setSyncState('Erreur de synchronisation') }
     )
@@ -122,7 +126,7 @@ export function useCentreData(centreId, user) {
   )
 
   const addStudent = useCallback(
-    async ({ name, course, total }) => {
+    async ({ name, course, total, customAnswers }) => {
       const student = {
         id: generateStudentId(),
         name,
@@ -133,8 +137,24 @@ export function useCentreData(centreId, user) {
         initials: name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase(),
         createdAt: new Date().toISOString(),
       }
+      if (customAnswers && Object.keys(customAnswers).length) student.customAnswers = customAnswers
       await setDoc(doc(db, 'centres', centreId, 'students', student.id), student)
       return student
+    },
+    [centreId]
+  )
+
+  const renameStudent = useCallback(
+    async (student, name) => {
+      const initials = name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+      await setDoc(doc(db, 'centres', centreId, 'students', student.id), { name, initials }, { merge: true })
+    },
+    [centreId]
+  )
+
+  const deleteStudent = useCallback(
+    async (student) => {
+      await deleteDoc(doc(db, 'centres', centreId, 'students', student.id))
     },
     [centreId]
   )
@@ -191,6 +211,14 @@ export function useCentreData(centreId, user) {
     [centreId]
   )
 
+  const saveCustomFields = useCallback(
+    async (fields) => {
+      await setDoc(doc(db, 'centres', centreId), { customFields: fields }, { merge: true })
+      setCustomFields(fields)
+    },
+    [centreId]
+  )
+
   const updateLogo = useCallback(
     async (file) => {
       const dataUrl = await compressLogoToDataUrl(file)
@@ -210,6 +238,7 @@ export function useCentreData(centreId, user) {
     centreName,
     logoUrl,
     brandColor,
+    customFields,
     students,
     payments,
     courses,
@@ -218,9 +247,12 @@ export function useCentreData(centreId, user) {
     dataError,
     completeSetup,
     addStudent,
+    renameStudent,
+    deleteStudent,
     addPayment,
     createCourse,
     saveBranding,
+    saveCustomFields,
     updateLogo,
     removeLogo,
   }

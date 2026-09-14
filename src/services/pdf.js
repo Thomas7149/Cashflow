@@ -88,6 +88,21 @@ export async function downloadAllStudentCards(students) {
   return true
 }
 
+function paintCourseQrPage(pdf, course, branding, logoDataUrl) {
+  paintCover(pdf, branding.brandColor)
+  pdf.setTextColor(246, 243, 233)
+  drawHeaderBrand(pdf, logoDataUrl, branding.centreName, 20, 30)
+  pdf.setFontSize(12)
+  pdf.text('QR d’inscription', 20, 42)
+  const image = qrCanvasDataUrl(`[data-course-qr="${course}"]`)
+  if (image) pdf.addImage(image, 'PNG', 55, 70, 100, 100)
+  pdf.setTextColor(39, 53, 45)
+  pdf.setFontSize(20)
+  pdf.text(course, 105, 205, { align: 'center', maxWidth: 170 })
+  pdf.setFontSize(11)
+  pdf.text('Scannez pour vous inscrire à cette formation', 105, 220, { align: 'center' })
+}
+
 export async function downloadCourseQrPdf(courses, branding = {}) {
   const entries = Object.keys(courses)
   if (!entries.length) return false
@@ -95,20 +110,17 @@ export async function downloadCourseQrPdf(courses, branding = {}) {
   const pdf = new jsPDF()
   entries.forEach((course, index) => {
     if (index > 0) pdf.addPage()
-    paintCover(pdf, branding.brandColor)
-    pdf.setTextColor(246, 243, 233)
-    drawHeaderBrand(pdf, logoDataUrl, branding.centreName, 20, 30)
-    pdf.setFontSize(12)
-    pdf.text('QR d’inscription', 20, 42)
-    const image = qrCanvasDataUrl(`[data-course-qr="${index}"]`)
-    if (image) pdf.addImage(image, 'PNG', 55, 70, 100, 100)
-    pdf.setTextColor(39, 53, 45)
-    pdf.setFontSize(20)
-    pdf.text(course, 105, 205, { align: 'center', maxWidth: 170 })
-    pdf.setFontSize(11)
-    pdf.text('Scannez pour vous inscrire à cette formation', 105, 220, { align: 'center' })
+    paintCourseQrPage(pdf, course, branding, logoDataUrl)
   })
   pdf.save('cashflow-qr-formations.pdf')
+  return true
+}
+
+export async function downloadSingleCourseQr(course, branding = {}) {
+  const logoDataUrl = await toDataUrl(branding.logoUrl)
+  const pdf = new jsPDF()
+  paintCourseQrPage(pdf, course, branding, logoDataUrl)
+  pdf.save(`cashflow-qr-${course}.pdf`)
   return true
 }
 
@@ -142,8 +154,8 @@ export async function downloadReceipt(student, amount, receiptNumber, branding =
   pdf.save(`${receiptNumber}.pdf`)
 }
 
-export function downloadPaymentsReportCsv(payments, students) {
-  const rows = [
+export function downloadPaymentsReportCsv(payments, students, customFields = []) {
+  const paymentRows = [
     ['Date', 'N° reçu', 'Étudiant', 'Identifiant', 'Cursus', 'Montant versé'],
     ...payments.map((p) => [
       p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString('fr-FR') : new Date(p.createdAt).toLocaleString('fr-FR'),
@@ -154,8 +166,17 @@ export function downloadPaymentsReportCsv(payments, students) {
       p.amount,
     ]),
   ]
-  if (rows.length === 1) rows.push(...students.map((s) => ['', '', '', s.id, s.course, s.paid]))
-  const csv = rows.map((row) => row.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(';')).join('\n')
+
+  const studentRows = [
+    ['Nom', 'Identifiant', 'Cursus', 'Total', 'Payé', 'Reste', ...customFields.map((f) => f.label)],
+    ...students.map((s) => [
+      s.name, s.id, s.course, s.total, s.paid, s.total - s.paid,
+      ...customFields.map((f) => s.customAnswers?.[f.id] || ''),
+    ]),
+  ]
+
+  const toCsv = (rows) => rows.map((row) => row.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(';')).join('\n')
+  const csv = `=== Paiements ===\n${toCsv(paymentRows)}\n\n=== Étudiants ===\n${toCsv(studentRows)}`
   const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)

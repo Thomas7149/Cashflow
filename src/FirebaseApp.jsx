@@ -21,11 +21,11 @@ function PublicStudentRoute({ centreId, studentId, onBack }) {
 }
 
 function PublicRegistrationRoute({ centreId, initialCourse, onRegistered }) {
-  const { courses, loading } = usePublicCourses(centreId)
+  const { courses, customFields, loading } = usePublicCourses(centreId)
   const { toast, notify } = useToast()
-  const submit = async ({ name, course, total }) => {
+  const submit = async ({ name, course, total, customAnswers }) => {
     try {
-      const student = await registerPublicStudent(centreId, { name, course, total })
+      const student = await registerPublicStudent(centreId, { name, course, total, customAnswers })
       onRegistered(student)
     } catch {
       notify('Inscription impossible, réessayez.')
@@ -33,13 +33,13 @@ function PublicRegistrationRoute({ centreId, initialCourse, onRegistered }) {
   }
   return (
     <>
-      <PublicRegistration courses={courses} initialCourse={initialCourse} loading={loading} onSubmit={submit} />
+      <PublicRegistration courses={courses} customFields={customFields} initialCourse={initialCourse} loading={loading} onSubmit={submit} />
       {toast && <div className="toast">{toast}</div>}
     </>
   )
 }
 
-function ManagerWorkspace({ user, centreId, role, logout, theme }) {
+function ManagerWorkspace({ user, centreId, role, logout, theme, updateDisplayName }) {
   const data = useCentreData(centreId, user)
   const ui = useWorkspaceUI()
   const { toast, notify } = useToast()
@@ -74,6 +74,7 @@ function ManagerWorkspace({ user, centreId, role, logout, theme }) {
       centreName={data.centreName}
       logoUrl={data.logoUrl}
       brandColor={data.brandColor}
+      customFields={data.customFields}
       students={data.students}
       payments={data.payments}
       courses={data.courses}
@@ -87,6 +88,8 @@ function ManagerWorkspace({ user, centreId, role, logout, theme }) {
       notify={notify}
       theme={theme}
       onAddStudent={async (form) => { await data.addStudent(form); notify('Étudiant inscrit et QR code prêt à partager') }}
+      onRenameStudent={data.renameStudent}
+      onDeleteStudent={data.deleteStudent}
       onAddPayment={async (student, amount) => {
         const { receiptNumber } = await data.addPayment(student, amount)
         notify(`Paiement de ${formatMoney(amount)} enregistré`)
@@ -94,22 +97,24 @@ function ManagerWorkspace({ user, centreId, role, logout, theme }) {
       }}
       onCreateCourse={isOwner ? data.createCourse : undefined}
       onSaveBranding={isOwner ? data.saveBranding : undefined}
+      onSaveCustomFields={isOwner ? data.saveCustomFields : undefined}
       onUpdateLogo={isOwner ? data.updateLogo : undefined}
       onRemoveLogo={isOwner ? data.removeLogo : undefined}
       onLogout={logout}
+      onUpdateProfileName={updateDisplayName}
     />
   )
 }
 
-function ManagerWorkspaceResolver({ user, logout, theme }) {
+function ManagerWorkspaceResolver({ user, logout, theme, updateDisplayName }) {
   const membership = useMembership(user)
   if (membership.loading) return <LoadingScreen />
-  return <ManagerWorkspace user={user} centreId={membership.centreId} role={membership.role} logout={logout} theme={theme} />
+  return <ManagerWorkspace user={user} centreId={membership.centreId} role={membership.role} logout={logout} theme={theme} updateDisplayName={updateDisplayName} />
 }
 
 export default function FirebaseApp({ theme }) {
   const { route, clear } = useHashRoute()
-  const { user, authLoading, authError, login, signup, loginWithGoogle, logout } = useAuth()
+  const { user, authLoading, authError, login, signup, loginWithGoogle, logout, updateDisplayName } = useAuth()
 
   if (route.studentId) return <PublicStudentRoute centreId={route.centreId} studentId={route.studentId} onBack={clear} />
   if (route.registerCourse !== null) {
@@ -131,5 +136,5 @@ export default function FirebaseApp({ theme }) {
   if (authLoading) return <LoadingScreen />
   if (!user) return <AuthScreen error={authError} onLogin={login} onSignup={signup} onGoogle={loginWithGoogle} />
 
-  return <ManagerWorkspaceResolver user={user} logout={logout} theme={theme} />
+  return <ManagerWorkspaceResolver user={user} logout={logout} theme={theme} updateDisplayName={updateDisplayName} />
 }

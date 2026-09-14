@@ -4,7 +4,7 @@ import { formatMoney } from '../../lib/format'
 import { courseUrl } from '../../lib/urls'
 import Modal from './Modal'
 
-export default function PortalModal({ centreId, courses, close, onCopyLink, onDownload }) {
+export default function PortalModal({ centreId, courses, close, onCopyLink, onDownload, onDownloadOne }) {
   return (
     <Modal title="QR d’inscription par formation" subtitle="Chaque QR ouvre directement l’inscription pour la formation choisie." close={close}>
       <div className="course-qr-list">
@@ -14,7 +14,10 @@ export default function PortalModal({ centreId, courses, close, onCopyLink, onDo
             <div>
               <b>{course}</b>
               <small>{formatMoney(courses[course])}</small>
-              <button className="button-ghost" onClick={() => onCopyLink(course)}>Copier le lien <ArrowUpRight size={13} /></button>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="button-ghost" onClick={() => onCopyLink(course)}>Copier le lien <ArrowUpRight size={13} /></button>
+                <button className="button-ghost" onClick={() => onDownloadOne(course)}>PDF <Download size={13} /></button>
+              </div>
             </div>
           </div>
         ))}

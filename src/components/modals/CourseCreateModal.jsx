@@ -24,7 +24,7 @@ export default function CourseCreateModal({ close, onSubmit }) {
     <Modal title="Créer une formation" subtitle="Définissez le programme et son montant de référence." close={close}>
       <form onSubmit={submit} className="form">
         <label>Nom de la formation<input name="courseName" placeholder="Ex. Infographie" autoFocus required /></label>
-        <label>Frais de formation<input name="courseFee" type="number" min="1" step="5000" placeholder="Ex. 350000" required /></label>
+        <label>Frais de formation<input name="courseFee" type="number" min="1" step="1" placeholder="Ex. 350000" required /></label>
         <label>Description<input name="courseDescription" placeholder="Ex. Parcours certifiant de 6 mois" /></label>
         <button className="button-primary full" disabled={submitting}><Check size={17} /> {submitting ? 'Enregistrement...' : 'Enregistrer la formation'}</button>
       </form>

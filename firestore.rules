@@ -19,17 +19,24 @@ service cloud.firestore {
     // so this is the only gate against spam/tampering: the record can only
     // reference a course that already exists in this centre's own catalogue, the
     // amount owed must exactly match that course's fee (a visitor cannot set
-    // their own price), the balance must start at zero, and no extra fields can
-    // be smuggled in.
-    function isValidPublicRegistration(centreId) {
+    // their own price), the balance must start at zero, and the fixed fields
+    // can't be smuggled with anything extra. `studentId` is passed in explicitly
+    // because a function can't see a path variable from the match block that
+    // calls it -- only variables in scope where the function itself is defined.
+    // customAnswers is deliberately validated loosely (just its shape and size):
+    // it only ever holds the centre's own custom registration questions, never
+    // anything financial, so the cost of an occasional malformed value is low
+    // compared to the complexity of validating an owner-defined, open-ended schema.
+    function isValidPublicRegistration(centreId, studentId) {
       let data = request.resource.data;
-      return data.keys().hasOnly(['id', 'name', 'course', 'total', 'paid', 'color', 'initials', 'createdAt'])
+      return data.keys().hasOnly(['id', 'name', 'course', 'total', 'paid', 'color', 'initials', 'createdAt', 'customAnswers'])
         && data.id is string && data.id == studentId
         && data.name is string && data.name.size() > 0 && data.name.size() < 120
         && data.paid == 0
         && data.course is string
         && exists(/databases/$(database)/documents/centres/$(centreId)/courses/$(data.course))
-        && data.total == get(/databases/$(database)/documents/centres/$(centreId)/courses/$(data.course)).data.fee;
+        && data.total == get(/databases/$(database)/documents/centres/$(centreId)/courses/$(data.course)).data.fee
+        && (!('customAnswers' in data) || (data.customAnswers is map && data.customAnswers.size() <= 12));
     }
 
     // A user only ever belongs to one centre. This top-level pointer is how an
@@ -42,7 +49,11 @@ service cloud.firestore {
 
     match /centres/{centreId} {
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && centreId == request.auth.uid;
-      allow read: if isMember(centreId);
+      // Nothing in the centre document is sensitive (name, branding, currency,
+      // the registration field list) -- it's public on purpose, since a visitor
+      // filling out the registration form needs to read it before ever signing in.
+      allow get: if true;
+      allow list: if false;
       allow update: if ownsCentre(centreId);
       allow delete: if false;
 
@@ -101,7 +112,7 @@ service cloud.firestore {
         // own members, so a visitor can never enumerate other students.
         allow get: if true;
         allow list: if isMember(centreId);
-        allow create: if isMember(centreId) || isValidPublicRegistration(centreId);
+        allow create: if isMember(centreId) || isValidPublicRegistration(centreId, studentId);
         allow update, delete: if isMember(centreId);
       }
 

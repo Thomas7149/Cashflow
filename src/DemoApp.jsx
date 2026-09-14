@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLocalDemo } from './hooks/useLocalDemo'
 import { useHashRoute } from './hooks/useHashRoute'
 import { useWorkspaceUI } from './hooks/useWorkspaceUI'
@@ -14,12 +15,13 @@ const DEMO_CENTRE_ID = 'demo'
 function clearDemoStorage() {
   ;[
     'cashflow-centre-setup', 'cashflow-centre-name', 'cashflow-students', 'cashflow-payments',
-    'cashflow-courses', 'cashflow-course-descriptions', 'cashflow-logo', 'cashflow-brand-color', 'cashflow-receipt-seq',
+    'cashflow-courses', 'cashflow-course-descriptions', 'cashflow-logo', 'cashflow-brand-color', 'cashflow-receipt-seq', 'cashflow-manager-name',
   ].forEach((key) => localStorage.removeItem(key))
 }
 
 export default function DemoApp({ theme }) {
   const data = useLocalDemo()
+  const [managerName, setManagerName] = useState(() => localStorage.getItem('cashflow-manager-name') || 'Gestionnaire')
   const { route, clear } = useHashRoute()
   const ui = useWorkspaceUI()
   const { toast, notify } = useToast()
@@ -33,10 +35,11 @@ export default function DemoApp({ theme }) {
     return (
       <PublicRegistration
         courses={data.courses}
+        customFields={data.customFields}
         initialCourse={route.registerCourse}
         loading={false}
-        onSubmit={async ({ name, course, total }) => {
-          const student = data.addStudent({ name, course, total })
+        onSubmit={async ({ name, course, total, customAnswers }) => {
+          const student = data.addStudent({ name, course, total, customAnswers })
           window.location.hash = `student=${student.id}&centre=${DEMO_CENTRE_ID}`
         }}
       />
@@ -65,11 +68,12 @@ export default function DemoApp({ theme }) {
       centreName={data.centreName}
       logoUrl={data.logoUrl}
       brandColor={data.brandColor}
+      customFields={data.customFields}
       students={data.students}
       payments={data.payments}
       courses={data.courses}
       syncState={data.syncState}
-      userLabel="Gestionnaire"
+      userLabel={managerName}
       userRole="Mode local"
       role="owner"
       accountLabel="Compte gestionnaire (démo)"
@@ -78,6 +82,8 @@ export default function DemoApp({ theme }) {
       notify={notify}
       theme={theme}
       onAddStudent={async (form) => { data.addStudent(form); notify('Étudiant inscrit et QR code prêt à partager') }}
+      onRenameStudent={async (student, name) => data.renameStudent(student, name)}
+      onDeleteStudent={async (student) => data.deleteStudent(student)}
       onAddPayment={async (student, amount) => {
         const { receiptNumber } = data.addPayment(student, amount)
         notify(`Paiement de ${formatMoney(amount)} enregistré`)
@@ -85,9 +91,11 @@ export default function DemoApp({ theme }) {
       }}
       onCreateCourse={async (form) => data.createCourse(form)}
       onSaveBranding={async (payload) => data.saveBranding(payload)}
+      onSaveCustomFields={async (fields) => data.saveCustomFields(fields)}
       onUpdateLogo={data.updateLogo}
       onRemoveLogo={async () => data.removeLogo()}
       onLogout={() => { clearDemoStorage(); window.location.reload() }}
+      onUpdateProfileName={async (name) => { localStorage.setItem('cashflow-manager-name', name); setManagerName(name) }}
     />
   )
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AlertTriangle, Wallet } from 'lucide-react'
+import PasswordInput from '../PasswordInput'
 
 export default function AuthScreen({ error, onLogin, onSignup, onGoogle }) {
   const [mode, setMode] = useState('login')
@@ -26,7 +27,7 @@ export default function AuthScreen({ error, onLogin, onSignup, onGoogle }) {
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@votrecentre.com" required autoFocus />
           </label>
           <label>Mot de passe
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="6 caractères minimum" minLength="6" required />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="6 caractères minimum" minLength="6" required autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
           </label>
           <button className="button-primary full">{mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</button>
         </form>
