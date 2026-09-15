@@ -20,7 +20,7 @@ function PublicStudentRoute({ centreId, studentId, onBack }) {
   return <StudentStatus student={student} loading={loading} onBack={onBack} />
 }
 
-function PublicRegistrationRoute({ centreId, initialCourse, onRegistered }) {
+function PublicRegistrationRoute({ centreId, onRegistered }) {
   const { courses, customFields, loading } = usePublicCourses(centreId)
   const { toast, notify } = useToast()
   const submit = async ({ name, course, total, customAnswers }) => {
@@ -33,7 +33,7 @@ function PublicRegistrationRoute({ centreId, initialCourse, onRegistered }) {
   }
   return (
     <>
-      <PublicRegistration courses={courses} customFields={customFields} initialCourse={initialCourse} loading={loading} onSubmit={submit} />
+      <PublicRegistration courses={courses} customFields={customFields} loading={loading} onSubmit={submit} />
       {toast && <div className="toast">{toast}</div>}
     </>
   )
@@ -117,11 +117,10 @@ export default function FirebaseApp({ theme }) {
   const { user, authLoading, authError, login, signup, loginWithGoogle, logout, updateDisplayName } = useAuth()
 
   if (route.studentId) return <PublicStudentRoute centreId={route.centreId} studentId={route.studentId} onBack={clear} />
-  if (route.registerCourse !== null) {
+  if (route.isRegistering) {
     return (
       <PublicRegistrationRoute
         centreId={route.centreId}
-        initialCourse={route.registerCourse}
         onRegistered={(student) => { window.location.hash = `student=${student.id}&centre=${route.centreId}` }}
       />
     )

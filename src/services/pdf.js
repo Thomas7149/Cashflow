@@ -88,39 +88,23 @@ export async function downloadAllStudentCards(students) {
   return true
 }
 
-function paintCourseQrPage(pdf, course, branding, logoDataUrl) {
+export async function downloadRegistrationQrPdf(branding = {}) {
+  const image = qrCanvasDataUrl('[data-register-qr="1"]')
+  if (!image) return false
+  const logoDataUrl = await toDataUrl(branding.logoUrl)
+  const pdf = new jsPDF()
   paintCover(pdf, branding.brandColor)
   pdf.setTextColor(246, 243, 233)
   drawHeaderBrand(pdf, logoDataUrl, branding.centreName, 20, 30)
   pdf.setFontSize(12)
   pdf.text('QR d’inscription', 20, 42)
-  const image = qrCanvasDataUrl(`[data-course-qr="${course}"]`)
-  if (image) pdf.addImage(image, 'PNG', 55, 70, 100, 100)
+  pdf.addImage(image, 'PNG', 55, 70, 100, 100)
   pdf.setTextColor(39, 53, 45)
   pdf.setFontSize(20)
-  pdf.text(course, 105, 205, { align: 'center', maxWidth: 170 })
+  pdf.text('Inscrivez-vous ici', 105, 205, { align: 'center', maxWidth: 170 })
   pdf.setFontSize(11)
-  pdf.text('Scannez pour vous inscrire à cette formation', 105, 220, { align: 'center' })
-}
-
-export async function downloadCourseQrPdf(courses, branding = {}) {
-  const entries = Object.keys(courses)
-  if (!entries.length) return false
-  const logoDataUrl = await toDataUrl(branding.logoUrl)
-  const pdf = new jsPDF()
-  entries.forEach((course, index) => {
-    if (index > 0) pdf.addPage()
-    paintCourseQrPage(pdf, course, branding, logoDataUrl)
-  })
-  pdf.save('cashflow-qr-formations.pdf')
-  return true
-}
-
-export async function downloadSingleCourseQr(course, branding = {}) {
-  const logoDataUrl = await toDataUrl(branding.logoUrl)
-  const pdf = new jsPDF()
-  paintCourseQrPage(pdf, course, branding, logoDataUrl)
-  pdf.save(`cashflow-qr-${course}.pdf`)
+  pdf.text('Scannez ce code et choisissez votre formation', 105, 220, { align: 'center' })
+  pdf.save('cashflow-qr-inscription.pdf')
   return true
 }
 

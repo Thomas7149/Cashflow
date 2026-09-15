@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { Check, QrCode } from 'lucide-react'
 
-export default function PublicRegistration({ courses, customFields = [], initialCourse, loading, onSubmit, error }) {
+export default function PublicRegistration({ courses, customFields = [], loading, onSubmit, error }) {
   const [submitting, setSubmitting] = useState(false)
   const courseNames = Object.keys(courses)
-  // parseHash already URL-decodes this value; decoding it again here would
-  // corrupt a course name containing accented characters or a literal "%".
-  const selectedCourse = courseNames.includes(initialCourse) ? initialCourse : courseNames[0] || ''
+  const defaultCourse = courseNames[0] || ''
 
   const submit = async (event) => {
     event.preventDefault()
@@ -58,13 +56,13 @@ export default function PublicRegistration({ courses, customFields = [], initial
       <div className="public-card">
         <div className="modal-symbol"><QrCode size={20} /></div>
         <p className="eyebrow">INSCRIPTION FORMATION</p>
-        <h1>{selectedCourse || 'Inscription étudiant'}</h1>
+        <h1>Inscription étudiant</h1>
         <p className="public-course">Remplissez vos informations pour créer votre dossier.</p>
         {error && <p className="auth-error">{error}</p>}
         <form onSubmit={submit} className="form">
           <label>Nom complet<input name="name" placeholder="Ex. Aminata Fall" required autoFocus /></label>
           <label>Formation
-            <select name="course" defaultValue={selectedCourse} required>
+            <select name="course" defaultValue={defaultCourse} required>
               {courseNames.map((course) => <option key={course}>{course}</option>)}
             </select>
           </label>

@@ -119,7 +119,7 @@ export default function AppShell({
         notify={notify}
       />
 
-      <QrExportBank centreId={centreId} students={students} courses={courses} />
+      <QrExportBank centreId={centreId} students={students} />
       <Toast message={toast} />
     </div>
   )

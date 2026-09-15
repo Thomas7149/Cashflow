@@ -31,12 +31,11 @@ export default function DemoApp({ theme }) {
     return <StudentStatus student={student} loading={false} onBack={clear} />
   }
 
-  if (route.registerCourse !== null) {
+  if (route.isRegistering) {
     return (
       <PublicRegistration
         courses={data.courses}
         customFields={data.customFields}
-        initialCourse={route.registerCourse}
         loading={false}
         onSubmit={async ({ name, course, total, customAnswers }) => {
           const student = data.addStudent({ name, course, total, customAnswers })

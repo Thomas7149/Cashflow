@@ -103,6 +103,12 @@ export default function SettingsModal({ centreName, brandColor, logoUrl, courses
 
       {isOwner ? (
         <>
+          <p className="form-section-label">Inscriptions</p>
+          <button className="button-secondary full" onClick={onCreateCourse}><Plus size={16} /> Créer une formation</button>
+          <button className="button-secondary full" onClick={onOpenCustomFields} style={{ marginTop: 8, marginBottom: 18 }}>
+            <Plus size={16} /> Personnaliser la fiche d’inscription
+          </button>
+
           <form className="form" onSubmit={submit}>
             <label>Nom du centre<input name="centreName" defaultValue={centreName} /></label>
             <div className="course-catalog">
@@ -111,8 +117,6 @@ export default function SettingsModal({ centreName, brandColor, logoUrl, courses
             </div>
             <button className="button-primary full"><Check size={17} /> Enregistrer les paramètres</button>
           </form>
-          <button className="button-secondary full" onClick={onCreateCourse}><Plus size={16} /> Créer une formation</button>
-          <button className="button-secondary full" onClick={onOpenCustomFields}><Plus size={16} /> Personnaliser la fiche d’inscription</button>
         </>
       ) : (
         <div className="course-catalog" style={{ marginBottom: 4 }}>

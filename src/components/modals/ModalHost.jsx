@@ -15,8 +15,8 @@ import NotificationsModal from './NotificationsModal'
 import CustomFieldsModal from './CustomFieldsModal'
 import EditProfileModal from './EditProfileModal'
 import ConfirmModal from './ConfirmModal'
-import { downloadCourseQrPdf, downloadPaymentsReportCsv, downloadSingleCourseQr, downloadStudentCard } from '../../services/pdf'
-import { courseUrl, inviteUrl } from '../../lib/urls'
+import { downloadPaymentsReportCsv, downloadRegistrationQrPdf, downloadStudentCard } from '../../services/pdf'
+import { inviteUrl, registerUrl } from '../../lib/urls'
 import { createInvite } from '../../services/invites'
 
 export default function ModalHost({
@@ -206,9 +206,8 @@ export default function ModalHost({
           centreId={centreId}
           courses={courses}
           close={closeModal}
-          onCopyLink={(course) => { navigator.clipboard?.writeText(courseUrl(centreId, course)); notify('Lien de formation copié') }}
-          onDownloadOne={async (course) => { await downloadSingleCourseQr(course, branding); notify('PDF téléchargé') }}
-          onDownload={async () => { if (!(await downloadCourseQrPdf(courses, branding))) notify('Créez une formation avant d’exporter ses QR') }}
+          onCopyLink={() => { navigator.clipboard?.writeText(registerUrl(centreId)); notify('Lien d’inscription copié') }}
+          onDownload={async () => { if (!(await downloadRegistrationQrPdf(branding))) notify('QR introuvable, réessayez.') }}
         />
       )
 
